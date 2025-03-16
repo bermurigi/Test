@@ -1,92 +1,172 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
+
+
 public class Enemy : MonoBehaviour
 {
-    public float detectionRange = 1.5f; // 앞 좀비 감지 범위
-    public float climbHeight = 1.2f;    // 좀비 한 마리 높이
-    public float climbDuration = 0.5f;  // 올라가는 시간
-    public float moveSpeed = 0.5f;      // 왼쪽으로 이동 속도
-    public float maxHealth = 100f;      // 최대 체력
-    private float currentHealth;        // 현재 체력
-
-    public Slider healthSlider;        
+    //이동
+    public float moveSpeed = 1.5f; 
+    public float jumpForce = 5f;  
+    public float detectDistance = 100.0f;
+    private bool isJumping = false;
+    private bool isStopped = false;
+    public float stopDistance = 1.5f;
     private Rigidbody2D rb;
-    private bool isClimbing = false;
+    public int laneNumber; // 현재 좀비가 속한 라인
+    private int enemyLayer;
+         
+
+
+    //공격
+    public float attackRange = 1.5f; 
+    public float attackCooldown = 1f;
+    private bool canAttack = true;
+    private float lastAttackTime = 0f;
+    public float attackDamage = 10f;
+    private Transform targetBuilding;
+
+
+
+  
 
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
-        currentHealth = maxHealth;
-        healthSlider.maxValue = maxHealth;
-        healthSlider.value = currentHealth;
-    }
+        
 
+        gameObject.layer = LayerMask.NameToLayer($"Lane{laneNumber}");
+
+
+        enemyLayer = LayerMask.GetMask("Lane" + laneNumber.ToString());
+       
+
+
+    }
+    void Update()
+    {
+        
+         CheckFront();
+        
+    }
     void FixedUpdate()
     {
-        if (!isClimbing)
+        if (!isStopped&&!isJumping)
         {
             MoveLeft();
-            TryClimbOnZombie();
+            
         }
+        FindNearestBuildingAndAttack();
     }
+
 
     void MoveLeft()
     {
-        rb.velocity = new Vector2(-moveSpeed, rb.velocity.y);
-    }
-
-    void TryClimbOnZombie()
-    {
-        RaycastHit2D hit = Physics2D.Raycast(transform.position, Vector2.left, detectionRange);
-        if (hit.collider != null && hit.collider.CompareTag("Enemy") && hit.collider.gameObject != gameObject) // 앞에 좀비가 있는지 확인
+      
+        if (transform.position.x > -0.8)
         {
-            StartCoroutine(ClimbOnZombie(hit.collider.transform));
+            rb.velocity = new Vector2(-moveSpeed, rb.velocity.y);
         }
         else
         {
-            isClimbing = false; 
+            rb.velocity = Vector2.zero; 
         }
     }
 
-    IEnumerator ClimbOnZombie(Transform targetZombie)
+
+    void FindNearestBuildingAndAttack()
     {
-        isClimbing = true;
-        rb.isKinematic = true;
-        rb.velocity = Vector2.zero;
+        GameObject[] buildings = GameObject.FindGameObjectsWithTag("Hero"); 
+        Transform closestBuilding = null;
+        float closestDistance = Mathf.Infinity; 
 
-        Vector3 targetPosition = new Vector3(transform.position.x, targetZombie.position.y + climbHeight, transform.position.z);
-        float elapsedTime = 0f;
-        Vector3 startPosition = transform.position;
-
-        while (elapsedTime < climbDuration)
+        foreach (GameObject building in buildings)
         {
-            transform.position = Vector3.Lerp(startPosition, targetPosition, elapsedTime / climbDuration);
-            elapsedTime += Time.deltaTime;
-            yield return null;
+            float distanceToBuilding = Vector2.Distance(transform.position, building.transform.position); 
+            if (distanceToBuilding < closestDistance) 
+            {
+                closestDistance = distanceToBuilding;
+                closestBuilding = building.transform;
+            }
         }
 
-        transform.position = targetPosition;
-        rb.isKinematic = false;
-        isClimbing = false;
+       
+        if (closestBuilding != null && closestDistance <= attackRange && canAttack)
+        {
+            Attack(closestBuilding);
+        }
+    }
+
+   
+    void Attack(Transform building)
+    {
+        if (Time.time - lastAttackTime >= attackCooldown) 
+        {
+          
+            
+            building.gameObject.GetComponent<Health>().TakeDamage(attackDamage);
+
+            lastAttackTime = Time.time; 
+            canAttack = false;  
+            StartCoroutine(ResetAttackCooldown()); 
+        }
     }
 
     
-    public void TakeDamage(float damage)
+    IEnumerator ResetAttackCooldown()
     {
-        currentHealth -= damage;
-        healthSlider.value = currentHealth;
+        yield return new WaitForSeconds(attackCooldown);
+        canAttack = true; 
 
-        if (currentHealth <= 0)
+    void CheckFront()
+    {
+ 
+
+        // 레이캐스트 발사
+        RaycastHit2D[] hits = Physics2D.RaycastAll(transform.position, Vector2.left, detectDistance, enemyLayer);
+
+      
+        Debug.DrawRay(transform.position, Vector2.left * detectDistance, Color.red);
+
+        // 모든 충돌체를 순차적으로 확인
+        foreach (RaycastHit2D hit in hits)
         {
-            Die();
+            if (hit.collider != null)
+            {
+                // 자기 자신은 제외하고 두 번째 충돌부터 처리
+                if (hit.collider.gameObject != gameObject)
+                {
+                    
+                    Jump();  
+                    break;   
+                }
+            }
         }
     }
 
-    
-    void Die()
+    // 점프 처리
+    void Jump()
     {
-        Destroy(gameObject); 
+        if (!isJumping)
+        {
+            isJumping = true;
+            rb.velocity = new Vector2(rb.velocity.x, jumpForce);
+
+            
+            StartCoroutine(ResetJump());
+        }
     }
+
+    IEnumerator ResetJump()
+    {
+        yield return new WaitForSeconds(2f); 
+        isJumping = false;
+    }
+
+
+
+    
+  
+
+    
 }

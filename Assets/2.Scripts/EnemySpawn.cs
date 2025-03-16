@@ -8,13 +8,13 @@ public class EnemySpawn : MonoBehaviour
     private float spawnTime;
     private float timer;
     [SerializeField]
-    private Transform spawnPoint;
+    private Transform[] spawnPoints;
     [SerializeField]
     private GameObject zombiePrefab;
 
     private void Start()
     {
-        spawnPoint=GetComponent<Transform>();
+        spawnPoints = GetComponentsInChildren<Transform>();
     }
     private void Update()
     {
@@ -28,6 +28,8 @@ public class EnemySpawn : MonoBehaviour
 
     void Spawn()
     {
-        Instantiate(zombiePrefab,spawnPoint.position,Quaternion.identity);
+        int i = Random.Range(1, 4);
+        GameObject unit = Instantiate(zombiePrefab, spawnPoints[i].position, Quaternion.identity);
+        unit.GetComponent<Enemy>().laneNumber = i;
     }
 }

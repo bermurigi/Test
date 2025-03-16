@@ -10,14 +10,14 @@ public class Bullet : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        if (other.CompareTag("Enemy")) // Enemy 태그를 가진 적과 충돌했을 때
+        if (other.CompareTag("Enemy")) 
         {
-            Enemy enemy = other.GetComponent<Enemy>();
+            Health enemy = other.GetComponent<Health>();
             if (enemy != null)
             {
                 enemy.TakeDamage(damage);
             }
-            Destroy(gameObject); // 총알 삭제
+            Destroy(gameObject); 
         }
     }
 }

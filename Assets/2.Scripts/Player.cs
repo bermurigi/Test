@@ -4,10 +4,10 @@ using UnityEngine;
 
 public class Player : MonoBehaviour
 {
-    public GameObject bulletPrefab;  // 총알 프리팹
-    public Transform firePoint;      // 총알이 발사될 위치
-    public float bulletSpeed = 5f;   // 총알 속도
-    public float fireRate = 1f;      // 1초당 1발
+    public GameObject bulletPrefab; 
+    public Transform firePoint;     
+    public float bulletSpeed = 5f;  
+    public float fireRate = 1f;     
 
     void Start()
     {
